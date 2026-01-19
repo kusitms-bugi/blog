@@ -1,28 +1,120 @@
 "use client";
 
-import Giscus from "@giscus/react";
-import { useTheme } from "next-themes";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-export default function Comments() {
-  const { theme } = useTheme();
+interface Comment {
+  id: number;
+  created_at: string;
+  post_slug: string;
+  author_name: string;
+  content: string;
+}
+
+interface Props {
+  postSlug: string;
+}
+
+const adjectives = ['멋진', '재미있는', '똑똑한'];
+const nouns = ['타이어', '킥보드', '천사', '뽀각', '돌덩이'];
+const suffixes = ['부기', '리니'];
+
+function generateRandomName() {
+  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+  return `${adjective} ${noun} ${suffix}`;
+}
+
+export default function SupabaseComments({ postSlug }: Props) {
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [authorName, setAuthorName] = useState("");
+  const isMobile = useIsMobile();
+
+  useEffect(() => {
+    fetchComments();
+    setAuthorName(generateRandomName());
+  }, []);
+
+  const fetchComments = async () => {
+    const { data, error } = await supabase
+      .from("comments")
+      .select("*")
+      .eq("post_slug", postSlug)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching comments:", error);
+    } else {
+      setComments(data as Comment[]);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (newComment.trim() === "") {
+      return;
+    }
+
+    const commentToInsert = {
+      post_slug: postSlug,
+      author_name: authorName,
+      content: newComment,
+    };
+
+    const { error } = await supabase.from("comments").insert([commentToInsert]);
+
+    if (error) {
+      console.error("Error posting comment:", error);
+    } else {
+      setNewComment("");
+      setAuthorName(generateRandomName());
+      fetchComments();
+    }
+  };
 
   return (
     <div className="mt-16 pt-8 border-t border-border">
-      <Giscus
-        id="comments"
-        repo="kusitms-bugi/blog"
-        repoId="R_kgDOQ7elxw"
-        data-category="Announcements"
-        data-category-id="DIC_kwDOQ7elx84C1EAY"
-        mapping="pathname"
-        strict="0"
-        reactionsEnabled="1"
-        emitMetadata="0"
-        inputPosition="bottom"
-        theme={theme === "dark" ? "dark" : "light"}
-        lang="ko"
-        loading="lazy"
-      />
+      <h2 className="text-2xl font-bold">Comments</h2>
+      <form onSubmit={handleSubmit} className="mt-4">
+        <div className="flex flex-col gap-4">
+          <div className="text-sm text-gray-500">
+            Your random name is: <span className="font-bold">{authorName}</span>
+          </div>
+          <textarea
+            placeholder="입력한 댓글은 수정하거나 삭제할 수 없어요."
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            className="p-2 border rounded"
+            rows={isMobile ? 3 : 4}
+          />
+          <button
+            type="submit"
+            disabled={newComment.trim() === ""}
+            className="self-end px-4 py-2 font-bold text-white bg-blue-500 rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            Submit
+          </button>
+        </div>
+      </form>
+      <div className="mt-8 space-y-4">
+        {comments.map((comment) => (
+          <div key={comment.id} className="p-4 border rounded">
+            <div className="flex items-center justify-between">
+              <p className="font-bold">
+                {comment.author_name}
+              </p>
+              <p className="text-sm text-gray-500">
+                {new Date(comment.created_at).toLocaleDateString()}
+              </p>
+            </div>
+            <p className="mt-2">{comment.content}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

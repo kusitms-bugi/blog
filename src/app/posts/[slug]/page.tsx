@@ -171,7 +171,7 @@ export default async function PostPage({ params }: PostPageProps) {
       </article>
 
       {/* 댓글 섹션 */}
-      <Comments />
+      <Comments postSlug={slug} />
     </>
   );
 }
