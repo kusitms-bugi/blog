@@ -6,14 +6,14 @@ import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
-const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://your-site.com";
+const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blog.bugi.co.kr/";
 const siteUrl = (() => {
   try {
     // Ensure URL is absolute; will throw if invalid
     return new URL(rawSiteUrl).toString().replace(/\/$/, "");
   } catch {
     // Fallback to a valid default to avoid build-time crash
-    return "https://your-site.com";
+    return "https://blog.bugi.co.kr/";
   }
 })();
 
@@ -24,6 +24,24 @@ export const metadata: Metadata = {
     template: `%s | 거부기린`,
   },
   description: "거부기린의 기술 블로그 - 개발, 디자인, 그리고 이야기",
+  keywords: [
+    "거부기린",
+    "기술 블로그",
+    "개발 블로그",
+    "웹 개발",
+    "프론트엔드",
+    "백엔드",
+    "디자인",
+    "프로그래밍",
+    "IT",
+    "소프트웨어",
+  ],
+  authors: [{ name: "거부기린", url: siteUrl }],
+  creator: "거부기린",
+  publisher: "거부기린",
+  alternates: {
+    canonical: siteUrl,
+  },
   openGraph: {
     title: "거부기린 블로그 🐢",
     description: "거부기린의 기술 블로그 - 개발, 디자인, 그리고 이야기",

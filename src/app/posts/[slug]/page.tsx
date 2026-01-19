@@ -30,11 +30,13 @@ export async function generateMetadata(
     };
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://your-site.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blog.bugi.co.kr/";
 
   return {
     title: post.title,
     description: post.description,
+    keywords: post.tags || [],
+    authors: post.author ? [{ name: post.author }] : [{ name: "거부기린" }],
     alternates: {
       canonical: `${siteUrl}/posts/${post.slug}`,
     },
@@ -79,7 +81,7 @@ export default async function PostPage({ params }: PostPageProps) {
     notFound();
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://your-site.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blog.bugi.co.kr/";
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -88,22 +90,29 @@ export default async function PostPage({ params }: PostPageProps) {
     description: post.description,
     image: post.coverImage || `${siteUrl}/opengraph-image.png`,
     datePublished: new Date(post.date).toISOString(),
+    dateModified: new Date(post.date).toISOString(),
     author: {
       "@type": "Person",
-      name: post.author || "Guest Author",
+      name: post.author || "거부기린",
+      url: siteUrl,
     },
     publisher: {
       "@type": "Organization",
-      name: "Your Site Name",
+      name: "거부기린",
       logo: {
         "@type": "ImageObject",
-        url: `${siteUrl}/logo.png`,
+        url: `${siteUrl}/icon-512x512.png`,
       },
     },
     mainEntityOfPage: {
       "@type": "WebPage",
       "@id": `${siteUrl}/posts/${post.slug}`,
     },
+    keywords: post.tags?.join(", ") || "",
+    articleSection: post.category || "기술",
+    inLanguage: "ko-KR",
+    wordCount: wordCount,
+    timeRequired: `PT${Math.ceil(wordCount / 225)}M`, // ISO 8601 duration format
   };
 
   return (

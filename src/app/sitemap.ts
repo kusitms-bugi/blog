@@ -2,7 +2,7 @@ import { getPostsFromCache, Post } from "@/lib/notion";
 import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://your-site.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blog.bugi.co.kr/";
 
   const posts = getPostsFromCache();
   const postUrls = posts.map((post: Post) => ({
@@ -12,6 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
+  // 참고: /admin, /api 등은 의도적으로 sitemap에서 제외됩니다
   return [
     {
       url: siteUrl,
