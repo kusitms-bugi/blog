@@ -55,6 +55,10 @@ export default function SupabaseComments({ postSlug }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (newComment.trim() === "") {
+      return;
+    }
+
     const commentToInsert = {
       post_slug: postSlug,
       author_name: authorName,
@@ -81,7 +85,7 @@ export default function SupabaseComments({ postSlug }: Props) {
             Your random name is: <span className="font-bold">{authorName}</span>
           </div>
           <textarea
-            placeholder="Write a comment..."
+            placeholder="입력한 댓글은 수정하거나 삭제할 수 없어요."
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             className="p-2 border rounded"
@@ -89,7 +93,8 @@ export default function SupabaseComments({ postSlug }: Props) {
           />
           <button
             type="submit"
-            className="self-end px-4 py-2 font-bold text-white bg-blue-500 rounded hover:bg-blue-700"
+            disabled={newComment.trim() === ""}
+            className="self-end px-4 py-2 font-bold text-white bg-blue-500 rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             Submit
           </button>
