@@ -10,18 +10,26 @@ interface Comment {
   post_slug: string;
   author_name: string;
   content: string;
-  is_anonymous: boolean;
 }
 
 interface Props {
   postSlug: string;
 }
 
+const adjectives = ['멋진', '재미있는', '똑똑한'];
+const nouns = ['타이어', '킥보드', '천사', '뽀각', '돌덩이'];
+const suffixes = ['부기', '리니'];
+
+function generateRandomName() {
+  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+  return `${adjective} ${noun} ${suffix}`;
+}
+
 export default function SupabaseComments({ postSlug }: Props) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
-  const [authorName, setAuthorName] = useState("");
-  const [isAnonymous, setIsAnonymous] = useState(false);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -47,9 +55,8 @@ export default function SupabaseComments({ postSlug }: Props) {
 
     const commentToInsert = {
       post_slug: postSlug,
-      author_name: isAnonymous ? "Anonymous" : authorName,
+      author_name: generateRandomName(),
       content: newComment,
-      is_anonymous: isAnonymous,
     };
 
     const { error } = await supabase.from("comments").insert([commentToInsert]);
@@ -58,7 +65,6 @@ export default function SupabaseComments({ postSlug }: Props) {
       console.error("Error posting comment:", error);
     } else {
       setNewComment("");
-      setAuthorName("");
       fetchComments();
     }
   };
@@ -68,24 +74,6 @@ export default function SupabaseComments({ postSlug }: Props) {
       <h2 className="text-2xl font-bold">Comments</h2>
       <form onSubmit={handleSubmit} className="mt-4">
         <div className="flex flex-col gap-4">
-          <div className="flex gap-4">
-            <input
-              type="text"
-              placeholder="Your name (optional)"
-              value={authorName}
-              onChange={(e) => setAuthorName(e.target.value)}
-              className="flex-1 p-2 border rounded"
-              disabled={isAnonymous}
-            />
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={isAnonymous}
-                onChange={(e) => setIsAnonymous(e.target.checked)}
-              />
-              <span>Post as anonymous</span>
-            </label>
-          </div>
           <textarea
             placeholder="Write a comment..."
             value={newComment}
@@ -106,7 +94,7 @@ export default function SupabaseComments({ postSlug }: Props) {
           <div key={comment.id} className="p-4 border rounded">
             <div className="flex items-center justify-between">
               <p className="font-bold">
-                {comment.is_anonymous ? "Anonymous" : comment.author_name}
+                {comment.author_name}
               </p>
               <p className="text-sm text-gray-500">
                 {new Date(comment.created_at).toLocaleDateString()}
