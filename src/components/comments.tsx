@@ -30,10 +30,12 @@ function generateRandomName() {
 export default function SupabaseComments({ postSlug }: Props) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
+  const [authorName, setAuthorName] = useState("");
   const isMobile = useIsMobile();
 
   useEffect(() => {
     fetchComments();
+    setAuthorName(generateRandomName());
   }, []);
 
   const fetchComments = async () => {
@@ -55,7 +57,7 @@ export default function SupabaseComments({ postSlug }: Props) {
 
     const commentToInsert = {
       post_slug: postSlug,
-      author_name: generateRandomName(),
+      author_name: authorName,
       content: newComment,
     };
 
@@ -65,6 +67,7 @@ export default function SupabaseComments({ postSlug }: Props) {
       console.error("Error posting comment:", error);
     } else {
       setNewComment("");
+      setAuthorName(generateRandomName());
       fetchComments();
     }
   };
@@ -74,6 +77,9 @@ export default function SupabaseComments({ postSlug }: Props) {
       <h2 className="text-2xl font-bold">Comments</h2>
       <form onSubmit={handleSubmit} className="mt-4">
         <div className="flex flex-col gap-4">
+          <div className="text-sm text-gray-500">
+            Your random name is: <span className="font-bold">{authorName}</span>
+          </div>
           <textarea
             placeholder="Write a comment..."
             value={newComment}
