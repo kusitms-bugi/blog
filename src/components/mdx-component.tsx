@@ -73,7 +73,7 @@ const components = {
         {children}
       </Badge>
     );
-  }
+  },
   pre: ({ className, ...props }: React.HTMLAttributes<HTMLPreElement>) => {
     return <pre className={cn("bg-transparent p-0", className)} {...props} />;
   },
