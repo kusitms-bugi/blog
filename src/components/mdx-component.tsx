@@ -12,6 +12,7 @@ import {
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { Badge } from "./ui/badge";
+import { Mermaid } from 'react-mermaid';
 
 const components = {
   h1: ({ children }: { children?: React.ReactNode }) => (
@@ -48,6 +49,15 @@ const components = {
     children?: React.ReactNode;
   }) => {
     const match = /language-(\w+)/.exec(className || "");
+    
+    if (className?.includes('language-mermaid')) {
+      return (
+        <div className="rounded-md p-2">
+          <Mermaid chart={String(children)} />
+        </div>
+      );
+    }
+    
     return match ? (
       <SyntaxHighlighter
         style={vscDarkPlus}
@@ -63,7 +73,7 @@ const components = {
         {children}
       </Badge>
     );
-  },
+  }
   pre: ({ className, ...props }: React.HTMLAttributes<HTMLPreElement>) => {
     return <pre className={cn("bg-transparent p-0", className)} {...props} />;
   },
