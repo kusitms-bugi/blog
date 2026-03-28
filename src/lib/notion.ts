@@ -23,6 +23,118 @@ const IMAGES_PATH = 'public/images/notion';
 export type { Post };
 export { getWordCount } from "./utils";
 
+type NotionColor =
+  | "default"
+  | "gray"
+  | "brown"
+  | "orange"
+  | "yellow"
+  | "green"
+  | "blue"
+  | "purple"
+  | "pink"
+  | "red"
+  | "default_background"
+  | "gray_background"
+  | "brown_background"
+  | "orange_background"
+  | "yellow_background"
+  | "green_background"
+  | "blue_background"
+  | "purple_background"
+  | "pink_background"
+  | "red_background"
+  | (string & {});
+
+type NotionRichText = {
+  type: "text" | "equation" | (string & {});
+  plain_text: string;
+  href: string | null;
+  annotations?: {
+    bold: boolean;
+    italic: boolean;
+    strikethrough: boolean;
+    underline: boolean;
+    code: boolean;
+    color: NotionColor;
+  };
+  equation?: { expression: string };
+};
+
+type NotionCalloutIcon =
+  | { type: "emoji"; emoji?: string }
+  | { type: "external"; external?: { url: string } }
+  | { type: "file"; file?: { url: string; expiry_time: string } }
+  | { type: "custom_emoji"; custom_emoji?: { id: string; name: string; url: string } }
+  | null;
+
+async function getBlockChildren(blockId: string, totalPage: number | null = null) {
+  const result: any[] = [];
+  let pageCount = 0;
+  let start_cursor: string | undefined = undefined;
+
+  do {
+    const response = (await notion.blocks.children.list({
+      start_cursor,
+      block_id: blockId,
+    })) as any;
+
+    result.push(...(response.results ?? []));
+    start_cursor = response?.next_cursor ?? undefined;
+    pageCount += 1;
+  } while (start_cursor != null && (totalPage == null || pageCount < totalPage));
+
+  // notion-to-md expects numbered_list_item to be sequentially numbered.
+  let numberedListIndex = 0;
+  for (const block of result) {
+    if (block && typeof block === "object" && block.type === "numbered_list_item") {
+      block.numbered_list_item = block.numbered_list_item ?? {};
+      block.numbered_list_item.number = ++numberedListIndex;
+    } else {
+      numberedListIndex = 0;
+    }
+  }
+
+  return result;
+}
+
+function escapeHtmlAttribute(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function richTextToMarkdown(richText: NotionRichText[] | undefined) {
+  const parts: string[] = [];
+  for (const content of richText ?? []) {
+    if (!content) continue;
+
+    if (content.type === "equation" && content.equation?.expression) {
+      parts.push(`$${content.equation.expression}$`);
+      continue;
+    }
+
+    const annotations = content.annotations as any;
+    let plainText = content.plain_text ?? "";
+    if (annotations) {
+      plainText = n2m.annotatePlainText(plainText, annotations);
+    }
+    if (content.href) {
+      plainText = `[${plainText}](${content.href})`;
+    }
+    parts.push(plainText);
+  }
+  return parts.join("");
+}
+
+function toBlockquoteMarkdown(blockquoteContent: string) {
+  return (blockquoteContent || "")
+    .split("\n")
+    .map((line) => (line.trim().length === 0 ? ">" : `> ${line}`))
+    .join("\n");
+}
 
 async function processImageBlock(block: BlockObjectResponse): Promise<string> {
   if (block.type !== 'image' || block.image.type !== 'file') {
@@ -76,6 +188,36 @@ async function processImageBlock(block: BlockObjectResponse): Promise<string> {
 
   const altText = block.image.caption?.map((c: RichTextItemResponse) => c.plain_text).join("") || filename;
   return `![${altText}](${githubRawUrl})`;
+}
+
+async function processCalloutBlock(block: any): Promise<string> {
+  if (!block || typeof block !== "object" || block.type !== "callout") return "";
+
+  const icon: NotionCalloutIcon = block.callout?.icon ?? null;
+  const iconText =
+    icon?.type === "emoji" && icon.emoji?.trim().length ? icon.emoji : "💡";
+
+  const color: NotionColor = block.callout?.color ?? "default";
+
+  const calloutText = richTextToMarkdown(block.callout?.rich_text);
+
+  let childrenMarkdown = "";
+  if (block.has_children) {
+    const childrenBlocks = await getBlockChildren(block.id, 100);
+    const childrenMdBlocks = await n2m.blocksToMarkdown(childrenBlocks as any);
+    childrenMarkdown = (n2m.toMarkdownString(childrenMdBlocks).parent ?? "").trim();
+  }
+
+  const combined = [calloutText.trim(), childrenMarkdown.trim()]
+    .filter(Boolean)
+    .join("\n\n")
+    .trim();
+
+  const marker = `<span data-callout="true" data-icon="${escapeHtmlAttribute(
+    iconText
+  )}" data-color="${escapeHtmlAttribute(String(color))}"></span>`;
+  const blockquoteContent = combined.length ? `${marker}\n\n${combined}` : marker;
+  return toBlockquoteMarkdown(blockquoteContent);
 }
 
 export async function getDatabaseStructure() {
@@ -138,6 +280,7 @@ export async function getPostFromNotion(pageId: string): Promise<Post | null> {
 
     // Set custom transformer for image blocks
     n2m.setCustomTransformer("image", processImageBlock as any);
+    n2m.setCustomTransformer("callout", processCalloutBlock as any);
 
     const mdBlocks = await n2m.pageToMarkdown(pageId);
     const mdResult = n2m.toMarkdownString(mdBlocks) as any;

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import Image, { type ImageProps } from "next/image";
-import type React from "react";
+import * as React from "react";
 import {
   Table,
   TableBody,
@@ -12,6 +12,41 @@ import {
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { Badge } from "./ui/badge";
+
+const CALLOUT_COLOR_CLASSES: Record<string, string> = {
+  default: "bg-muted/40 border-border",
+  default_background: "bg-muted/40 border-border",
+  gray: "bg-muted/40 border-border",
+  gray_background: "bg-muted border-border",
+  brown: "bg-amber-50 dark:bg-amber-950/25 border-amber-200 dark:border-amber-900/40",
+  brown_background:
+    "bg-amber-50 dark:bg-amber-950/25 border-amber-200 dark:border-amber-900/40",
+  orange:
+    "bg-orange-50 dark:bg-orange-950/25 border-orange-200 dark:border-orange-900/40",
+  orange_background:
+    "bg-orange-50 dark:bg-orange-950/25 border-orange-200 dark:border-orange-900/40",
+  yellow:
+    "bg-yellow-50 dark:bg-yellow-950/25 border-yellow-200 dark:border-yellow-900/40",
+  yellow_background:
+    "bg-yellow-50 dark:bg-yellow-950/25 border-yellow-200 dark:border-yellow-900/40",
+  green:
+    "bg-emerald-50 dark:bg-emerald-950/25 border-emerald-200 dark:border-emerald-900/40",
+  green_background:
+    "bg-emerald-50 dark:bg-emerald-950/25 border-emerald-200 dark:border-emerald-900/40",
+  blue: "bg-blue-50 dark:bg-blue-950/25 border-blue-200 dark:border-blue-900/40",
+  blue_background:
+    "bg-blue-50 dark:bg-blue-950/25 border-blue-200 dark:border-blue-900/40",
+  purple:
+    "bg-purple-50 dark:bg-purple-950/25 border-purple-200 dark:border-purple-900/40",
+  purple_background:
+    "bg-purple-50 dark:bg-purple-950/25 border-purple-200 dark:border-purple-900/40",
+  pink: "bg-pink-50 dark:bg-pink-950/25 border-pink-200 dark:border-pink-900/40",
+  pink_background:
+    "bg-pink-50 dark:bg-pink-950/25 border-pink-200 dark:border-pink-900/40",
+  red: "bg-red-50 dark:bg-red-950/25 border-red-200 dark:border-red-900/40",
+  red_background:
+    "bg-red-50 dark:bg-red-950/25 border-red-200 dark:border-red-900/40",
+};
 
 const components = {
   h1: ({ children }: { children?: React.ReactNode }) => (
@@ -34,11 +69,68 @@ const components = {
   li: ({ children }: { children?: React.ReactNode }) => (
     <li className="mb-2">{children}</li>
   ),
-  blockquote: ({ children }: { children?: React.ReactNode }) => (
-    <blockquote className="mb-4 border-neutral-300 border-l-2 py-2 pl-4 italic">
-      {children}
-    </blockquote>
-  ),
+  blockquote: ({ children }: { children?: React.ReactNode }) => {
+    const childrenArray = React.Children.toArray(children);
+    const firstChild = childrenArray[0];
+
+    if (React.isValidElement(firstChild)) {
+      const pChildren = React.Children.toArray(
+        (firstChild.props as { children?: React.ReactNode }).children
+      );
+      const marker = pChildren[0];
+
+      if (
+        React.isValidElement(marker) &&
+        marker.type === "span" &&
+        (marker.props as any)?.["data-callout"]
+      ) {
+        const icon = (marker.props as any)?.["data-icon"] ?? "💡";
+        const color = String((marker.props as any)?.["data-color"] ?? "default");
+        const colorClass = CALLOUT_COLOR_CLASSES[color] ?? CALLOUT_COLOR_CLASSES.default;
+
+        const newPChildren = pChildren.slice(1);
+        if (typeof newPChildren[0] === "string") {
+          newPChildren[0] = newPChildren[0].replace(/^ /, "");
+        }
+
+        const firstParagraphIsEmpty =
+          newPChildren.length === 0 ||
+          newPChildren.every(
+            (node) => typeof node === "string" && node.trim().length === 0
+          );
+
+        const contentChildren = firstParagraphIsEmpty
+          ? childrenArray.slice(1)
+          : [
+              React.cloneElement(
+                firstChild as React.ReactElement<any>,
+                {},
+                newPChildren
+              ),
+              ...childrenArray.slice(1),
+            ];
+
+        return (
+          <div
+            className={cn(
+              "my-6 flex gap-3 rounded-md border px-4 py-3",
+              "text-foreground",
+              colorClass
+            )}
+          >
+            <div className="mt-0.5 select-none text-lg leading-none">{icon}</div>
+            <div className="min-w-0 flex-1">{contentChildren}</div>
+          </div>
+        );
+      }
+    }
+
+    return (
+      <blockquote className="mb-4 border-neutral-300 border-l-2 py-2 pl-4 italic">
+        {children}
+      </blockquote>
+    );
+  },
   code: ({
     className,
     children,
